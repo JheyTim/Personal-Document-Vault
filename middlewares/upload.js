@@ -1,14 +1,13 @@
 const multer = require('multer');
-const multerS3 = require('multer-s3');
-const s3Client = require('../config/s3Client');
 const path = require('path');
+const fs = require('fs');
+
+const tempDir = './temp_uploads';
 
 // Set storage engine
-const storage = multerS3({
-  s3: s3Client,
-  bucket: process.env.S3_BUCKET_NAME,
-  acl: 'private', // Make sure files are not publicly accessible
-  key: function (req, file, cb) {
+const storage = multer.diskStorage({
+  destination: tempDir,
+  filename: function (req, file, cb) {
     cb(null, Date.now().toString() + path.extname(file.originalname));
   },
 });
@@ -38,5 +37,8 @@ const checkFileType = (file, cb) => {
 
   return cb(null, true);
 };
+
+// Ensure the temp_uploads directory exists
+if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
 module.exports = upload;
