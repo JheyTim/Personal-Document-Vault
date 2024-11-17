@@ -7,6 +7,7 @@ const fs = require('fs');
 const s3Client = require('../config/s3Client');
 const Document = require('../models/Document');
 const User = require('../models/User');
+const Folder = require('../models/Folder');
 const {
   decryptUserKey,
   encryptData,
@@ -15,9 +16,19 @@ const {
 
 exports.uploadFile = async (req, res) => {
   try {
+    const { folderId } = req.body;
+
     // Validate file
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Validate folderId
+    if (folderId) {
+      const folder = await Folder.findOne({ _id: folderId, userId: req.user });
+      if (!folder) {
+        return res.status(400).json({ message: 'Invalid folder ID' });
+      }
     }
 
     // Retrieve user's encryption key
@@ -57,6 +68,7 @@ exports.uploadFile = async (req, res) => {
 
     const document = new Document({
       userId: req.user,
+      folderId: folderId || null,
       fileName: fileName,
       originalName: req.file.originalname,
       fileKey: fileName,
@@ -117,9 +129,6 @@ exports.downloadFile = async (req, res) => {
     // Decrypt the file
     const decryptedData = decryptData(fileBuffer, userKey, iv);
 
-    // Set headers
-    res.attachment(document.originalName);
-
     // Set the headers
     res.setHeader(
       'Content-Disposition',
@@ -158,6 +167,74 @@ exports.deleteFile = async (req, res) => {
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
     console.error('Delete error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getDocumentsInSpecificFolder = async (req, res) => {
+  try {
+    const { folderId } = req.params;
+
+    // Validate folderId
+    if (folderId !== 'null') {
+      const folder = await Folder.findOne({ _id: folderId, userId: req.user });
+      if (!folder) {
+        return res.status(400).json({ message: 'Folder not found' });
+      }
+    }
+
+    const documents = await Document.find({
+      userId: req.user,
+      folderId: folderId !== 'null' ? folderId : null,
+    });
+
+    res.json({ documents });
+  } catch (error) {
+    console.error('Get Documents Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.updateTags = async (req, res) => {
+  try {
+    const { tags } = req.body;
+
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.user,
+    });
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    document.tags = tags ? tags.split(',').map((tag) => tag.trim()) : [];
+    await document.save();
+
+    res.json({ message: 'Tags updated', document });
+  } catch (error) {
+    console.error('Update Tags Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.searchDocumentsByNameOrTags = async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    const regex = new RegExp(query, 'i'); // Case-insensitive search
+
+    const documents = await Document.find({
+      userId: req.user,
+      $or: [{ originalName: regex }, { tags: regex }],
+    });
+
+    res.json({ documents });
+  } catch (error) {
+    console.error('Search Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

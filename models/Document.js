@@ -6,6 +6,11 @@ const DocumentSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  folderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Folder',
+    default: null, // Documents can be in the root directory
+  },
   fileName: {
     type: String,
     required: true,
@@ -13,17 +18,19 @@ const DocumentSchema = new mongoose.Schema({
   originalName: {
     type: String,
   },
-  filePath: {
-    type: String,
-  },
   fileKey: {
     type: String, // Will be used for S3 integration
   },
-  tags: [String],
+  tags: {
+    type: [String],
+    default: [],
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+DocumentSchema.index({ originalName: 'text', tags: 'text' });
 
 module.exports = mongoose.model('Document', DocumentSchema);
