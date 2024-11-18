@@ -30,7 +30,7 @@ Personal Document Vault is a secure REST API that allows users to upload, store,
 * **MongoDB**: NoSQL database for JSON-like, schema-flexible data.
 * **Mongoose**: ODM library for MongoDB with schema-based modeling.
 * **AWS S3**: Scalable file storage with high availability and security.
-* **@aws-sdk/client-s3**
+* **@aws-sdk/client-s3**: Lets you manage Amazon S3 buckets and objects programmatically.
 * **bcrypt**: Library for secure password hashing.
 * **jsonwebtoken (JWT)**: Compact token for authentication and data exchange.
 * **Crypto Module**: Node.js module for encryption and decryption.
